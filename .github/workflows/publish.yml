@@ -18,13 +18,16 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.14.0
           registry-url: https://registry.npmjs.org
+
+      - name: Show tool versions
+        run: |
+          node --version
+          npm --version
 
       - name: Verify package contents
         run: npm pack --dry-run
 
-      - name: Publish
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish with npm trusted publishing
+        run: npm publish --access public --provenance

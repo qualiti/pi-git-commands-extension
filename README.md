@@ -107,11 +107,18 @@ If you later move to a scoped public package, publish with:
 npm publish --access public
 ```
 
-For GitHub Actions publishing:
+For GitHub Actions publishing with npm trusted publishers:
 
-1. Add an `NPM_TOKEN` repository secret.
-2. Create a GitHub release.
-3. The workflow will run `npm publish --access public`.
+1. Add this GitHub repository as a trusted publisher in npm.
+2. Do not add an `NPM_TOKEN` secret for publishing.
+3. Create a GitHub release.
+4. The workflow will publish with GitHub OIDC using:
+
+```bash
+npm publish --access public --provenance
+```
+
+This workflow requires GitHub-hosted runners plus Node 22.14.0 or newer.
 
 ## Files
 
