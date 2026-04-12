@@ -2,7 +2,7 @@ import { access, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { complete } from "@mariozechner/pi-ai";
-import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext, SessionMessageEntry } from "@mariozechner/pi-coding-agent";
 
 type NotifyLevel = "info" | "warning" | "error";
 type CommitMode = "none" | "staged" | "all";
@@ -667,7 +667,7 @@ function formatRecentCommitExamples(commits: CommitDraft[]) {
 
 function buildSessionHistory(pi: ExtensionAPI, ctx: ExtensionCommandContext) {
 	const branch = ctx.sessionManager.getBranch();
-	const relevant = branch.filter((entry: any) => entry?.type === "message");
+	const relevant = branch.filter((entry): entry is SessionMessageEntry => entry.type === "message");
 	const tail = relevant.slice(-24);
 	const sections: string[] = [];
 	const sessionName = typeof pi.getSessionName === "function" ? pi.getSessionName() : undefined;
@@ -1094,7 +1094,7 @@ function extractPrUrl(text: string) {
 
 function cleanPushError(result: ExecResult, target: string) {
 	const text = cleanErrorText(result);
-	const lower = text.toLowerCase();
+	const lower = text?.toLowerCase() ?? "";
 	if (lower.includes("failed to push some refs") || lower.includes("non-fast-forward")) {
 		return `Push to ${target} was rejected. Pull or rebase first, then try again.`;
 	}

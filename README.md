@@ -77,49 +77,6 @@ Or load the extension file directly for quick testing:
 pi -e /absolute/path/to/pi-git-commands-extension/extensions/git-commands.ts
 ```
 
-## Publish to npm
-
-This repository includes a GitHub Actions publish workflow at `.github/workflows/publish.yml`.
-
-For local publishing:
-
-1. Log in to npm:
-
-```bash
-npm login
-```
-
-2. Preview the tarball:
-
-```bash
-npm run pack:check
-```
-
-3. Publish:
-
-```bash
-npm publish
-```
-
-If you later move to a scoped public package, publish with:
-
-```bash
-npm publish --access public
-```
-
-For GitHub Actions publishing with npm trusted publishers:
-
-1. Add this GitHub repository as a trusted publisher in npm.
-2. Do not add an `NPM_TOKEN` secret for publishing.
-3. Create a GitHub release.
-4. The workflow will publish with GitHub OIDC using:
-
-```bash
-npm publish --access public --provenance
-```
-
-This workflow requires GitHub-hosted runners plus Node 22.14.0 or newer.
-
 ## Files
 
 - `package.json` — Pi package manifest for npm and git installs

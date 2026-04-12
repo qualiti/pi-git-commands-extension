@@ -1,33 +1,25 @@
-name: Publish to npm
+name: Publish Package
 
 on:
-  release:
-    types: [published]
-  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  id-token: write  # Required for OIDC
+  contents: read
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22.14.0
-          registry-url: https://registry.npmjs.org
-
-      - name: Show tool versions
-        run: |
-          node --version
-          npm --version
-
-      - name: Verify package contents
-        run: npm pack --dry-run
-
-      - name: Publish with npm trusted publishing
-        run: npm publish --access public --provenance
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm ci
+      - run: npm run build --if-present
+      - run: npm test
+      - run: npm publish
