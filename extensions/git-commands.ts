@@ -1145,3 +1145,23 @@ function formatError(error: unknown) {
 	if (error instanceof Error) return error.message;
 	return String(error);
 }
+
+export const __test__ = {
+	parseStatus,
+	isUnmergedStatus,
+	parseLooseJson,
+	splitCommitMessage,
+	normalizeCommitDraft,
+	formatCommitMessage,
+	branchNameFromSubject,
+	sanitizeBranchName,
+	parseRecentCommitMessages,
+	buildCommitStyleSummary,
+	formatRecentCommitExamples,
+	extractTextBlocks,
+	extractPrUrl,
+	cleanPushError,
+	cleanErrorText,
+	ensureTrailingNewline,
+	truncate,
+};

@@ -27,12 +27,16 @@
   ],
   "scripts": {
     "build": "echo 'No build step required'",
-    "check": "npm pack --dry-run",
+    "test": "vitest run",
+    "check": "npm test && npm pack --dry-run",
     "pack:check": "npm pack --dry-run"
   },
   "peerDependencies": {
     "@mariozechner/pi-ai": "*",
     "@mariozechner/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
   },
   "pi": {
     "extensions": [

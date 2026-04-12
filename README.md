@@ -65,6 +65,12 @@ This package follows Pi package guidelines:
 
 ## Local development
 
+Run the unit tests:
+
+```bash
+npm test
+```
+
 Run a local package install into Pi:
 
 ```bash

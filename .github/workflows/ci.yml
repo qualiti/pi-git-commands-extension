@@ -20,5 +20,11 @@ jobs:
           node-version: 22.14.0
           registry-url: https://registry.npmjs.org
 
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
       - name: Pack dry run
         run: npm pack --dry-run
