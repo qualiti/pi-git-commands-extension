@@ -1,6 +1,6 @@
 {
   "name": "pi-git-commands-extension",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Shareable Pi package that adds /commit, /push, /commit-and-push, and /commit-pr git commands.",
   "type": "module",
   "license": "MIT",
