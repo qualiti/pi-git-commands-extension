@@ -1,0 +1,42 @@
+{
+  "name": "pi-git-commands-extension",
+  "version": "0.1.0",
+  "description": "Shareable Pi package that adds /commit, /push, /commit-and-push, and /commit-pr git commands.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Tony David Sprotte <tony@sprotte.dev>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qualiti/pi-git-commands-extension.git"
+  },
+  "homepage": "https://github.com/qualiti/pi-git-commands-extension#readme",
+  "bugs": {
+    "url": "https://github.com/qualiti/pi-git-commands-extension/issues"
+  },
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "pi",
+    "git",
+    "commit"
+  ],
+  "files": [
+    "extensions",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "echo 'No build step required'",
+    "check": "npm pack --dry-run",
+    "pack:check": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-ai": "*",
+    "@mariozechner/pi-coding-agent": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ]
+  }
+}
