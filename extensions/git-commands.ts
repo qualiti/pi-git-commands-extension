@@ -1,8 +1,8 @@
 import { access, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { complete } from "@mariozechner/pi-ai";
-import type { ExtensionAPI, ExtensionCommandContext, SessionMessageEntry } from "@mariozechner/pi-coding-agent";
+import { complete } from "@earendil-works/pi-ai/compat";
+import type { ExtensionAPI, ExtensionCommandContext, SessionMessageEntry } from "@earendil-works/pi-coding-agent";
 
 type NotifyLevel = "info" | "warning" | "error";
 type CommitMode = "none" | "staged" | "all";
