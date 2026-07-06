@@ -75,6 +75,32 @@ describe("git-commands helpers", () => {
 		).toEqual(["hello", "world"]);
 	});
 
+	it("parses commit command args and preserves message hints", () => {
+		expect(__test__.parseCommitCommandArgs("fix calendar overlap validation")).toEqual({
+			messageHint: "fix calendar overlap validation",
+			instructions: "",
+		});
+		expect(__test__.parseCommitCommandArgs('--instructions "Use Conventional Commits"')).toEqual({
+			messageHint: "",
+			instructions: "Use Conventional Commits",
+		});
+		expect(__test__.parseCommitCommandArgs("-I 'Always include ticket IDs'")).toEqual({
+			messageHint: "",
+			instructions: "Always include ticket IDs",
+		});
+		expect(__test__.parseCommitCommandArgs("--instructions=Keep subjects short")).toEqual({
+			messageHint: "",
+			instructions: "Keep subjects short",
+		});
+	});
+
+	it("merges commit instruction sections with truncation", () => {
+		expect(__test__.mergeCommitInstructionSections(["Use Conventional Commits", "", "Include ticket IDs"])).toBe(
+			"Use Conventional Commits\n\nInclude ticket IDs",
+		);
+		expect(__test__.truncate(__test__.mergeCommitInstructionSections(["abcdef"]), 4)).toBe("abcd\n…[truncated]");
+	});
+
 	it("maps push failures to clearer user-facing messages", () => {
 		expect(
 			__test__.cleanPushError(
