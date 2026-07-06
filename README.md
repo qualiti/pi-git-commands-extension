@@ -48,6 +48,34 @@ You can also pass a commit hint:
 /commit-pr add recurring event form polish
 ```
 
+## Commit message instructions
+
+You can provide extra instructions for AI-generated commit messages. They are merged into the generation prompt alongside git changes, recent commit style, and session history.
+
+Sources are combined in this order:
+
+1. `PI_GIT_COMMANDS_COMMIT_INSTRUCTIONS` environment variable
+2. Git config `pi.git-commands.commitInstructions`
+3. A repository file at `.pi/git-commit-instructions`, `.pi/git-commit-instructions.txt`, or `.pi/git-commit-instructions.md`
+4. Per-command flags: `--instructions "..."` or `-I "..."`
+
+Examples:
+
+```bash
+export PI_GIT_COMMANDS_COMMIT_INSTRUCTIONS="Use Conventional Commits with a scope."
+```
+
+```bash
+git config pi.git-commands.commitInstructions "Keep subjects under 50 characters."
+```
+
+```text
+/commit --instructions "Mention the affected API route in the body."
+/commit-and-push -I "Use the chore: prefix for dependency updates."
+```
+
+Passing plain text after the command still bypasses AI generation and uses your message directly. Instruction flags only apply when the command auto-generates a commit message.
+
 ## Requirements
 
 - `git` must be available on `PATH`

@@ -1,4 +1,4 @@
-import { access, rm, writeFile } from "node:fs/promises";
+import { access, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { complete } from "@earendil-works/pi-ai/compat";
@@ -61,7 +61,20 @@ type CommitDraft = {
 	body: string;
 };
 
+type ParsedCommitArgs = {
+	messageHint: string;
+	instructions: string;
+};
+
 const STATUS_KEY = "git-commands";
+const COMMIT_INSTRUCTIONS_GIT_CONFIG_KEY = "pi.git-commands.commitInstructions";
+const COMMIT_INSTRUCTIONS_ENV_VAR = "PI_GIT_COMMANDS_COMMIT_INSTRUCTIONS";
+const COMMIT_INSTRUCTIONS_FILE_NAMES = [
+	".pi/git-commit-instructions.md",
+	".pi/git-commit-instructions.txt",
+	".pi/git-commit-instructions",
+] as const;
+const MAX_COMMIT_INSTRUCTIONS_CHARS = 4_000;
 const MAX_SESSION_HISTORY_CHARS = 14_000;
 const MAX_DIFF_CHARS = 18_000;
 const MAX_DIFFSTAT_CHARS = 4_000;
@@ -79,6 +92,7 @@ Rules:
 - Use the actual git changes as the primary source of truth.
 - Use the session history to understand intent, motivation, and context.
 - Match the repository's recent commit style when it fits the current change.
+- Follow additional commit instructions when they do not conflict with the actual git changes.
 - The subject must be imperative, specific, and no longer than 72 characters.
 - Do not end the subject with a period.
 - The body is optional. Use an empty string when unnecessary.
@@ -473,13 +487,14 @@ async function resolveCommitDraft(
 	mode: Exclude<CommitMode, "none">,
 	args: string,
 ): Promise<CommitDraft> {
-	const provided = args.trim();
-	if (provided) {
-		return normalizeCommitDraft(splitCommitMessage(provided));
+	const parsed = parseCommitCommandArgs(args);
+	if (parsed.messageHint) {
+		return normalizeCommitDraft(splitCommitMessage(parsed.messageHint));
 	}
 
 	const snapshot = await buildChangeSnapshot(pi, repo.root, mode);
 	const sessionHistory = buildSessionHistory(pi, ctx);
+	const commitInstructions = await resolveCommitInstructions(pi, repo.root, parsed.instructions);
 	const sessionName = typeof pi.getSessionName === "function" ? pi.getSessionName() ?? "" : "";
 
 	const prompt = [
@@ -502,6 +517,9 @@ async function resolveCommitDraft(
 		"Recent commit examples:",
 		snapshot.recentCommitExamples || "(none)",
 		"",
+		"Additional commit instructions:",
+		commitInstructions || "(none)",
+		"",
 		"Session history:",
 		sessionHistory || "(none)",
 		"",
@@ -510,10 +528,10 @@ async function resolveCommitDraft(
 	].join("\n");
 
 	const responseText = await generateWithPi(ctx, COMMIT_SYSTEM_PROMPT, prompt);
-	const parsed = parseLooseJson<{ subject?: string; body?: string }>(responseText);
+	const generated = parseLooseJson<{ subject?: string; body?: string }>(responseText);
 	return normalizeCommitDraft({
-		subject: parsed.subject,
-		body: parsed.body,
+		subject: generated.subject,
+		body: generated.body,
 	});
 }
 
@@ -528,7 +546,7 @@ async function generateBranchName(
 	const snapshot = await buildChangeSnapshot(pi, repo.root, mode);
 	const sessionHistory = buildSessionHistory(pi, ctx);
 	const sessionName = typeof pi.getSessionName === "function" ? pi.getSessionName() ?? "" : "";
-	const provided = args.trim();
+	const provided = parseCommitCommandArgs(args).messageHint;
 
 	const prompt = [
 		`Current branch: ${repo.branch}`,
@@ -688,6 +706,100 @@ function buildSessionHistory(pi: ExtensionAPI, ctx: ExtensionCommandContext) {
 	}
 
 	return truncate(sections.join("\n\n"), MAX_SESSION_HISTORY_CHARS);
+}
+
+function parseCommitCommandArgs(args: string): ParsedCommitArgs {
+	const instructions: string[] = [];
+	let remaining = args.trim();
+
+	const quotedPatterns = [
+		/(?:--instructions|-I)\s+(?:"([^"]*)"|'([^']*)')/g,
+		/(?:--instructions|-I)=(?:"([^"]*)"|'([^']*)')/g,
+	];
+	for (const pattern of quotedPatterns) {
+		remaining = remaining.replace(pattern, (_, doubleQuoted, singleQuoted) => {
+			const value = (doubleQuoted ?? singleQuoted ?? "").trim();
+			if (value) {
+				instructions.push(value);
+			}
+			return " ";
+		});
+	}
+
+	const unquotedPatterns = [
+		/(?:--instructions|-I)=([^\s].*?)(?=\s+(?:--|-I)\b|$)/g,
+		/(?:--instructions|-I)\s+(\S+)/g,
+	];
+	for (const pattern of unquotedPatterns) {
+		remaining = remaining.replace(pattern, (_, value: string) => {
+			const trimmed = value.trim();
+			if (trimmed) {
+				instructions.push(trimmed);
+			}
+			return " ";
+		});
+	}
+
+	return {
+		messageHint: remaining.replace(/\s+/g, " ").trim(),
+		instructions: instructions.join("\n\n"),
+	};
+}
+
+function mergeCommitInstructionSections(sections: string[]) {
+	return truncate(
+		sections.map((section) => section.trim()).filter(Boolean).join("\n\n"),
+		MAX_COMMIT_INSTRUCTIONS_CHARS,
+	);
+}
+
+async function resolveCommitInstructions(
+	pi: ExtensionAPI,
+	repoRoot: string,
+	commandInstructions: string,
+): Promise<string> {
+	const sections: string[] = [];
+
+	const envInstructions = process.env[COMMIT_INSTRUCTIONS_ENV_VAR]?.trim();
+	if (envInstructions) {
+		sections.push(envInstructions);
+	}
+
+	const gitResult = await run(pi, repoRoot, "git", ["config", "--get", COMMIT_INSTRUCTIONS_GIT_CONFIG_KEY]);
+	if (gitResult.code === 0) {
+		const configured = gitResult.stdout.trim();
+		if (configured) {
+			sections.push(configured);
+		}
+	}
+
+	const fileInstructions = await readCommitInstructionsFile(repoRoot);
+	if (fileInstructions) {
+		sections.push(fileInstructions);
+	}
+
+	if (commandInstructions.trim()) {
+		sections.push(commandInstructions.trim());
+	}
+
+	return mergeCommitInstructionSections(sections);
+}
+
+async function readCommitInstructionsFile(repoRoot: string) {
+	for (const fileName of COMMIT_INSTRUCTIONS_FILE_NAMES) {
+		const filePath = path.join(repoRoot, fileName);
+		try {
+			await access(filePath);
+			const content = (await readFile(filePath, "utf8")).trim();
+			if (content) {
+				return content;
+			}
+		} catch {
+			continue;
+		}
+	}
+
+	return "";
 }
 
 function extractTextBlocks(content: unknown): string[] {
@@ -1150,6 +1262,8 @@ export const __test__ = {
 	parseStatus,
 	isUnmergedStatus,
 	parseLooseJson,
+	parseCommitCommandArgs,
+	mergeCommitInstructionSections,
 	splitCommitMessage,
 	normalizeCommitDraft,
 	formatCommitMessage,
